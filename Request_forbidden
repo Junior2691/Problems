@@ -1,0 +1,28 @@
+import requests
+headers = {
+    'authority': 'tvc4.investing.com',
+    'accept': '*/*',
+    'accept-language': 'en-US,en;q=0.9',
+    'content-type': 'text/plain',
+    'origin': 'https://tvc-invdn-com.investing.com',
+    'referer': 'https://tvc-invdn-com.investing.com/',
+    'sec-ch-ua': '"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'empty',
+    'sec-fetch-mode': 'cors',
+    'sec-fetch-site': 'same-site',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+}
+params = {
+    'symbol': '17940',
+    'resolution': '1',
+    'from': '1694613203',
+    'to': '1694699663',
+}
+response = requests.get(
+    'https://tvc4.investing.com/86fd2cdaadcb4c77ffd862dcab14c196/1694699591/56/56/23/history',
+    params=params,
+    headers=headers,
+)
+print(response.status_code)    #403 Error

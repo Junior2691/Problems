@@ -1,0 +1,77 @@
+from selenium import webdriver
+from bs4 import BeautifulSoup
+import json
+import pandas as pd
+import datetime
+import numpy as np
+
+# Setting Output File Path
+outputPath = 'C://Users//AFF43//Desktop//Python_Codes//investing//'
+
+# Starting virtual browser via Selenium
+options = webdriver.ChromeOptions()
+options.add_argument('--headless')
+options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36')
+driver = webdriver.Chrome(options=options)
+
+# Setting up dictionary for site-based symbols' encoding
+symbols_code_list = {'NIFTY 50': '17940'}
+
+# Initializing final dataframe for file
+final_df = pd.DataFrame(columns=['Date', 'Time', 'Symbol', 'Open', 'Close', 'Low', 'High', 'Volume', 'Open Interest'])
+
+for key, value in symbols_code_list.items():
+    # Setting up time and date settings for fetching data
+    start_time = datetime.time(hour=9,minute=15,second=00)
+    end_time = datetime.time(hour=15,minute=30, second=00)
+    ending_time = datetime.datetime.today.date
+    initial_time = ending_time - datetime.timedelta(days=10)
+    # Setting up variable for cases where data is not available to end loop
+    reject = 0
+    # Main
+    while(reject<=5):
+        startingTimestamp = datetime.datetime(initial_time.year, initial_time.month, initial_time.day, start_time.hour, start_time.minute, start_time.second).timestamp()
+        endingTimestamp = datetime.datetime(ending_time.year, ending_time.month, ending_time.day, end_time.hour, end_time.minute, end_time.second).timestamp()
+        url = 'https://tvc4.investing.com/32241e74eb68fc67222b52ae0b880dad/1695197324/56/56/'+initial_time.strftime('%y') + '/history'
+        final_url = url + '?' + 'symbol=' + value + '&' + 'resolution=1&from=' + str(int(startingTimestamp)) +'&to=' + str(int(endingTimestamp))
+        driver.get(final_url)
+        contents = driver.page_source    #Get page source in the form of a html string
+        soup = BeautifulSoup(contents, 'html.parser')
+        response = soup.text
+        response = json.loads(response)   #Converts response into a dictionary
+        if(response['s'] == 'ok'):
+            date = [datetime.datetime.fromtimestamp(t).strftime("%Y-%m-%d") for t in response['t']]
+            time = [datetime.datetime.fromtimestamp(t).strftime("%H:%M:%S") for t in response['t']]
+            symbol = [key] * len(response['o'])
+            open = response['o']
+            close = response['c']
+            low = response['l']
+            high = response['h']
+            volume = response['v']
+            open_interest = [np.nan] * len(response['o'])
+            df = pd.DataFrame({
+                            'Date': date,
+                            'Time': time,
+                            'Symbol': symbol,
+                            'Open': np.around(open,2),
+                            'Close': np.around(close,2),
+                            'Low': np.around(low,2),
+                            'High': np.around(high,2),
+                            'Volume': volume,
+                            'Open Interest': open_interest})
+            df = df.fillna(0)
+            final_df = pd.concat([final_df, df])
+        else:
+            print('Data From ' + str(datetime.datetime.fromtimestamp(startingTimestamp).strftime("%d-%m-%Y")) + ' To ' + str(datetime.datetime.fromtimestamp(endingTimestamp).strftime("%d-%m-%Y")) + ' is not available')
+            reject= reject + 1
+        # Shifting time values
+        initial_time = initial_time - datetime.timedelta(days=11)
+        ending_time = ending_time - datetime.timedelta(days=11)
+        # Saving file if reject exceeds MAX_ATTEMPTS
+        if(reject>=5):
+            final_df = final_df.reset_index(drop=True)
+            final_df = final_df.sort_values(by=['Date', 'Time'])
+            final_df.to_csv(outputPath+(key + '_' + str(min(final_df['Date'])) + '_' + str(max(final_df['Date']))+'.csv'), index=False)
+            print('Data file has been generated')
+# Quitting virtual browser in the end
+driver.quit()
